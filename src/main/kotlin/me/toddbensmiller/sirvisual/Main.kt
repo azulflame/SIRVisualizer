@@ -3,6 +3,7 @@ package me.toddbensmiller.sirvisual
 import me.toddbensmiller.sirvisual.gui.SIRGUIApp
 import tornadofx.*
 import com.natpryce.konfig.*
+import javafx.scene.image.Image
 import java.io.File
 import kotlin.random.Random.Default.nextInt
 
@@ -12,6 +13,7 @@ import kotlin.random.Random.Default.nextInt
 
 fun main(args: Array<String>)
 {
+
 	val sToIRate = Key("infectionRate", doubleType)
 	val iToRRate = Key("recoveryRate", doubleType)
 	val rToSRate = Key("relapseRate", doubleType)

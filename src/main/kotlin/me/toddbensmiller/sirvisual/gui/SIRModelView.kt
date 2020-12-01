@@ -1,11 +1,10 @@
 package me.toddbensmiller.sirvisual.gui
 
 import javafx.application.Platform
+import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.paint.Color
-import javafx.scene.shape.Rectangle
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import me.toddbensmiller.sirvisual.SIRModel
 import tornadofx.*
@@ -19,50 +18,18 @@ import kotlin.math.roundToLong
 class SIRModelView : View() {
 
 
-	init {
-		generateRects()
-		recolorRects()
-	}
-
 	companion object {
-		var rects = Array(SIRModel.getSize()) { Array(SIRModel.getSize()) { Rectangle() } }
-
-		fun generateRects() {
-			SIRModel.getGrid().indices.forEach { row ->
-				SIRModel.getGrid()[row].indices.forEach { col ->
-					rects[row][col] = Rectangle(row.toDouble(), col.toDouble(), 1.0, 1.0)
-				}
-			}
-		}
-
-		fun recolorRects() {
-			SIRModel.getGrid().indices.forEach { row ->
-				SIRModel.getGrid()[row].indices.forEach { col ->
-					rects[row][col].fill = SIRModel.getColorOfCell(row, col)
-				}
-			}
-		}
+		val gridImageProp = SimpleObjectProperty(SIRModel.getImage())
+		var gridImage by gridImageProp
 	}
 
 	override val root = stackpane {
 		hbox {
 			group {
-				vbox {
-					rects.indices.forEach { row ->
-						hbox {
-							rects[row].indices.forEach { col ->
-								rectangle {
-									width = rects[row][col].width
-									height = rects[row][col].height
-									x = rects[row][col].x
-									y = rects[row][col].y
-									fill = SIRModel.getColorOfCell(row, col)
-									rects[row][col].fillProperty().onChange {
-										fill = SIRModel.getColorOfCell(x.toInt(), y.toInt())
-									}
-								}
-							}
-						}
+				imageview{
+					image = gridImage
+					gridImageProp.onChange {
+						image = gridImage
 					}
 				}
 			}
@@ -90,7 +57,7 @@ class SIRModelView : View() {
 								text = "${SIRModel.susceptibleCount}"
 								textFill = Color.rgb(50, 160, 50)
 								SIRModel.sProp.onChange { x ->
-									Platform.runLater { text = "$x" }
+									Platform.runLater{text = "$x"}
 								}
 							}
 						}
@@ -216,7 +183,7 @@ class SIRModelView : View() {
 							field("Minimum Frame Time")
 							{
 								hbox {
-									/*slider {
+									slider {
 										min = 30.0
 										max = 1000.0
 										value = SIRModel.minFrameTime.toDouble()
@@ -225,11 +192,11 @@ class SIRModelView : View() {
 											SIRModel.minFrameTime = y
 											value = y.toDouble()
 										}
-									}*/
+									}
 									label {
 										text = "${SIRModel.minFrameTime} ms"
-										SIRModel.minFrameProp.onChange {x ->
-											Platform.runLater{text = "$x ms"}
+										SIRModel.minFrameProp.onChange { x ->
+											Platform.runLater { text = "$x ms" }
 										}
 									}
 								}

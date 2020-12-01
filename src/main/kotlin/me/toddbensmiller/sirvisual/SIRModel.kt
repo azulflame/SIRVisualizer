@@ -8,6 +8,7 @@ import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleLongProperty
+import javafx.scene.image.WritableImage
 import javafx.scene.paint.Color
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -39,10 +40,6 @@ object SIRModel {
 
     var isPaused: Boolean = true
 
-    //    val susProp = SimpleIntegerProperty(0)
-//    val infProp = SimpleIntegerProperty(0)
-//    val remProp = SimpleIntegerProperty(0)
-//    val vacProp = SimpleIntegerProperty(0)
     val iProp = SimpleIntegerProperty(0)
     var infectedCount by iProp
     val sProp = SimpleIntegerProperty(0)
@@ -54,7 +51,7 @@ object SIRModel {
     val frameProp = SimpleLongProperty(0)
     var frameTime by frameProp
     val history: ArrayList<Triple<Int, Int, Int>> = ArrayList()
-
+    @Volatile var isReady:  Boolean = true
     private val step_mutex = Mutex()
 
 
@@ -112,7 +109,6 @@ object SIRModel {
     private fun step() {
         identifyChanges()
         applyChanges()
-        SIRModelView.recolorRects()
     }
 
     private fun identifyChanges() {
@@ -180,20 +176,14 @@ object SIRModel {
         while (!isPaused) {
             step_mutex.withLock {
                 frameTime = measureTimeMillis {
+                    isReady = false
                     step()
                     history.add(Triple(susceptibleCount, infectedCount, removedCount))
+                    SIRModelView.gridImage = getImage()
                 }
                 val delayTimer = minFrameTime - frameTime
                 if (delayTimer > 0) {
-                    if(minFrameTime > 2* frameTime)
-                    {
-                        minFrameTime = frameTime * 3 / 4
-                    }
                     delay(delayTimer)
-                }
-                else
-                {
-                    minFrameTime = (frameTime * 1.5).toLong()
                 }
             }
         }
@@ -212,8 +202,22 @@ object SIRModel {
             removedCount = 0
             vaccinatedCount = 0
             setStateOfCell(Random.nextInt(300) + 50, Random.nextInt(300) + 50, SIRState.INFECTED)
-            SIRModelView.recolorRects()
             history.clear()
+            SIRModelView.gridImage = getImage()
         }
     }
+
+    fun getImage(): WritableImage
+    {
+        val out = WritableImage(size, size)
+        for(row in grid.indices)
+        {
+            for (col in grid[0].indices)
+            {
+                out.pixelWriter.setColor(row,col, getColorOfCell(row,col))
+            }
+        }
+        return out
+    }
 }
+
