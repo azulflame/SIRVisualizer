@@ -21,13 +21,15 @@ class SIRModelView : View() {
 	companion object {
 		val gridImageProp = SimpleObjectProperty(SIRModel.getImage())
 		var gridImage by gridImageProp
+		var lastUserFrameTimeSetting: Long = 15
 	}
 
 	override val root = stackpane {
 		hbox {
 			group {
-				imageview{
+				imageview {
 					image = gridImage
+					SIRModel.getImage()
 					gridImageProp.onChange {
 						image = gridImage
 					}
@@ -57,7 +59,7 @@ class SIRModelView : View() {
 								text = "${SIRModel.susceptibleCount}"
 								textFill = Color.rgb(50, 160, 50)
 								SIRModel.sProp.onChange { x ->
-									Platform.runLater{text = "$x"}
+									Platform.runLater { text = "$x" }
 								}
 							}
 						}
@@ -95,9 +97,9 @@ class SIRModelView : View() {
 										max = 12.0
 										value = SIRModel.neighborRadius.toDouble()
 										valueProperty().onChange { x ->
-											val y = (10000 * x).roundToInt() / 10000.0
-											SIRModel.neighborRadius = y.toInt()
-											value = y
+											val y = x.roundToInt()
+											SIRModel.neighborRadius = y
+											value = y.toDouble()
 										}
 									}
 
@@ -184,19 +186,50 @@ class SIRModelView : View() {
 							{
 								hbox {
 									slider {
-										min = 30.0
+										min = 15.0
 										max = 1000.0
 										value = SIRModel.minFrameTime.toDouble()
 										valueProperty().onChange { x ->
-											val y = (x / 10).roundToLong() * 10
+											val y = (x / 5).roundToLong() * 5
 											SIRModel.minFrameTime = y
 											value = y.toDouble()
+											lastUserFrameTimeSetting = y
 										}
 									}
 									label {
 										text = "${SIRModel.minFrameTime} ms"
 										SIRModel.minFrameProp.onChange { x ->
-											Platform.runLater { text = "$x ms" }
+											Platform.runLater {
+												text = "${x} ms"
+												if (lastUserFrameTimeSetting < x) {
+													textFill = Color.RED
+												}
+												else
+												{
+													textFill = Color.BLACK
+												}
+											}
+										}
+									}
+								}
+							}
+							field("Initial Count")
+							{
+								hbox {
+									slider {
+										min = 1.0
+										max = 10.0
+										value = SIRModel.initialCount.toDouble()
+										valueProperty().onChange { x ->
+											val y = x.roundToInt()
+											SIRModel.initialCount = y
+											value = y.toDouble()
+										}
+									}
+									label {
+										text = "${SIRModel.initialCount}"
+										SIRModel.initialProp.onChange { x ->
+											Platform.runLater { text = "$x" }
 										}
 									}
 								}
