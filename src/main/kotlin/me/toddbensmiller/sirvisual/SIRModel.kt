@@ -96,13 +96,15 @@ object SIRModel {
 				SIRState.REMOVED -> removedCount++
 				SIRState.INFECTED -> infectedCount++
 				SIRState.SUSCEPTIBLE -> susceptibleCount++
-				else -> {}
+				else -> {
+				}
 			}
 			when (grid[row][col]) {
 				SIRState.REMOVED -> removedCount--
 				SIRState.INFECTED -> infectedCount--
 				SIRState.SUSCEPTIBLE -> susceptibleCount--
-				else -> {}
+				else -> {
+				}
 			}
 		}
 		grid[row][col] = state
@@ -118,19 +120,30 @@ object SIRModel {
 		image_mutex.withLock {
 			for (row in size - 1 downTo 0) {
 				for (col in size - 1 downTo 0) {
-					if (grid[row][col] == SIRState.INFECTED) {
+					if (grid[row][col] == SIRState.INFECTED_DECAY_ONLY) {
+						if (nextDouble() < infectedToRemovedChance) {
+							grid[row][col] = SIRState.REMOVED_TRANSITION
+						}
+					} else if (grid[row][col] == SIRState.INFECTED) {
+						var hasSusNearby = isSIRS
 						for (verticalOffset in -neighborRadius..neighborRadius) {
 							if (row + verticalOffset in 0 until size) {
 								val taxiRadius = neighborRadius - abs(verticalOffset) // taxicab radius
 								for (horizontalOffset in -taxiRadius..taxiRadius) {
 									if (col + horizontalOffset in 0 until size) {
-										if (grid[row + verticalOffset][col + horizontalOffset] == SIRState.SUSCEPTIBLE && nextDouble() < susceptibleToInfectedChance) {
-											grid[row + verticalOffset][col + horizontalOffset] =
-												SIRState.INFECTED_TRANSITION
+										if (grid[row + verticalOffset][col + horizontalOffset] == SIRState.SUSCEPTIBLE) {
+											hasSusNearby = true
+											if (nextDouble() < susceptibleToInfectedChance) {
+												grid[row + verticalOffset][col + horizontalOffset] =
+													SIRState.INFECTED_TRANSITION
+											}
 										}
 									}
 								}
 							}
+						}
+						if (!hasSusNearby) {
+							grid[row][col] = SIRState.INFECTED_DECAY_ONLY
 						}
 						if (nextDouble() < infectedToRemovedChance) {
 							grid[row][col] = SIRState.REMOVED_TRANSITION
@@ -174,6 +187,7 @@ object SIRModel {
 			SIRState.INFECTED -> Color.rgb(254, 39, 18)
 			SIRState.SUSCEPTIBLE -> Color.rgb(50, 250, 50)
 			SIRState.REMOVED -> Color.rgb(34, 34, 134)
+			SIRState.INFECTED_DECAY_ONLY -> Color.rgb(254, 39, 19)
 			else -> Color.BLACK
 		}
 	}
