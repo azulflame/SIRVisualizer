@@ -1,7 +1,5 @@
 package me.toddbensmiller.sirvisual.gui
 
-import com.sun.javafx.css.Style
-import javafx.scene.chart.LineChart
 import javafx.scene.chart.NumberAxis
 import me.toddbensmiller.sirvisual.SIRModel
 import tornadofx.Fragment

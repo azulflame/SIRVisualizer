@@ -23,7 +23,7 @@ import kotlin.system.measureTimeMillis
 
 
 object SIRModel {
-	var size: Int = 450
+	private var size: Int = 450
 	private var grid: Array<Array<SIRState>> = Array(size) { Array(size) { SIRState.SUSCEPTIBLE } }
 
 	val radiusProp = SimpleIntegerProperty(8)
@@ -41,7 +41,7 @@ object SIRModel {
 	val initialProp = SimpleIntegerProperty(1)
 	var initialCount by initialProp
 
-	var isPaused: Boolean = true
+	private var isPaused: Boolean = true
 
 	val iProp = SimpleIntegerProperty(0)
 	var infectedCount by iProp
@@ -49,16 +49,16 @@ object SIRModel {
 	var susceptibleCount by sProp
 	val rProp = SimpleIntegerProperty(0)
 	var removedCount by rProp
-	val vProp = SimpleIntegerProperty(0)
-	var vaccinatedCount by vProp
-	val frameProp = SimpleLongProperty(0)
-	var frameTime by frameProp
+	private val vProp = SimpleIntegerProperty(0)
+	private var vaccinatedCount by vProp
+	private val frameProp = SimpleLongProperty(0)
+	private var frameTime by frameProp
 	val history: ArrayList<Triple<Int, Int, Int>> = ArrayList()
 	private val step_mutex = Mutex()
 	private val image_mutex = Mutex()
 
-	var imageOut = WritableImage(size, size)
-	var tempImage = WritableImage(size, size)
+	private var imageOut = WritableImage(size, size)
+	private var tempImage = WritableImage(size, size)
 
 
 	fun init(
@@ -154,18 +154,22 @@ object SIRModel {
 		image_mutex.withLock {
 			for (row in grid.indices) {
 				for (col in grid[row].indices) {
-					if (grid[row][col] == SIRState.INFECTED_TRANSITION) {
-						grid[row][col] = SIRState.INFECTED
-						infectedCount++
-						susceptibleCount--
-					} else if (grid[row][col] == SIRState.SUSCEPTIBLE_TRANSITION) {
-						grid[row][col] = SIRState.SUSCEPTIBLE
-						removedCount--
-						susceptibleCount++
-					} else if (grid[row][col] == SIRState.REMOVED_TRANSITION) {
-						grid[row][col] = SIRState.REMOVED
-						removedCount++
-						infectedCount--
+					when {
+						grid[row][col] == SIRState.INFECTED_TRANSITION -> {
+							grid[row][col] = SIRState.INFECTED
+							infectedCount++
+							susceptibleCount--
+						}
+						grid[row][col] == SIRState.SUSCEPTIBLE_TRANSITION -> {
+							grid[row][col] = SIRState.SUSCEPTIBLE
+							removedCount--
+							susceptibleCount++
+						}
+						grid[row][col] == SIRState.REMOVED_TRANSITION -> {
+							grid[row][col] = SIRState.REMOVED
+							removedCount++
+							infectedCount--
+						}
 					}
 				}
 			}
@@ -174,7 +178,7 @@ object SIRModel {
 	}
 
 
-	fun getColorOfCell(row: Int, col: Int): Color {
+	private fun getColorOfCell(row: Int, col: Int): Color {
 		return when (grid[row][col]) {
 			SIRState.INFECTED -> Color.rgb(254, 39, 18)
 			SIRState.SUSCEPTIBLE -> Color.rgb(50, 250, 50)
@@ -228,7 +232,7 @@ object SIRModel {
 		return imageOut
 	}
 
-	suspend fun updateImage() {
+	private suspend fun updateImage() {
 		image_mutex.withLock {
 			for (x in 0 until size) {
 				for (y in 0 until size) {
@@ -239,7 +243,7 @@ object SIRModel {
 		moveImage()
 	}
 
-	suspend fun moveImage() {
+	private suspend fun moveImage() {
 		image_mutex.withLock {
 			imageOut = tempImage
 			tempImage = WritableImage(size, size)

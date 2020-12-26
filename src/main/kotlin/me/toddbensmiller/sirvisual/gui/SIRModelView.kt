@@ -2,9 +2,9 @@ package me.toddbensmiller.sirvisual.gui
 
 import javafx.application.Platform
 import javafx.beans.property.SimpleObjectProperty
+import javafx.scene.image.WritableImage
 import javafx.scene.paint.Color
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import me.toddbensmiller.sirvisual.SIRModel
 import tornadofx.*
@@ -20,7 +20,7 @@ class SIRModelView : View() {
 
 	companion object {
 		val gridImageProp = SimpleObjectProperty(SIRModel.getImage())
-		var gridImage by gridImageProp
+		var gridImage: WritableImage by gridImageProp
 		var lastUserFrameTimeSetting: Long = 15
 	}
 
@@ -38,7 +38,7 @@ class SIRModelView : View() {
 			vbox {
 				hbox {
 					button("PLAY").action {
-						GlobalScope.async {
+						GlobalScope.launch {
 							SIRModel.play()
 						}
 					}
@@ -200,13 +200,10 @@ class SIRModelView : View() {
 										text = "${SIRModel.minFrameTime} ms"
 										SIRModel.minFrameProp.onChange { x ->
 											Platform.runLater {
-												text = "${x} ms"
-												if (lastUserFrameTimeSetting < x) {
-													textFill = Color.RED
-												}
-												else
-												{
-													textFill = Color.BLACK
+												text = "$x ms"
+												textFill = when {
+													lastUserFrameTimeSetting < x -> Color.RED
+													else -> Color.BLACK
 												}
 											}
 										}
