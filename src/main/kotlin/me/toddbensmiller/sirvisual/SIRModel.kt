@@ -10,9 +10,7 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleLongProperty
 import javafx.scene.image.WritableImage
 import javafx.scene.paint.Color
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import me.toddbensmiller.sirvisual.gui.SIRModelView
@@ -231,7 +229,6 @@ object SIRModel {
 		isPaused = true
 		step_mutex.withLock {
 			grid = Array(size) { Array(size) { SIRState.SUSCEPTIBLE } }
-			updateImage()
 			susceptibleCount = size * size
 			infectedCount = 0
 			removedCount = 0
@@ -239,6 +236,7 @@ object SIRModel {
 			for (x in 1..initialCount) {
 				setStateOfCell(Random.nextInt(300) + 50, Random.nextInt(300) + 50, SIRState.INFECTED)
 			}
+			updateImage()
 			history.clear()
 			SIRModelView.gridImage = getImage()
 		}
