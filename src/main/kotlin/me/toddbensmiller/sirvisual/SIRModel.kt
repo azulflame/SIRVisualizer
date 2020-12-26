@@ -17,7 +17,6 @@ import me.toddbensmiller.sirvisual.gui.SIRModelView
 import tornadofx.getValue
 import tornadofx.setValue
 import kotlin.math.abs
-import kotlin.math.max
 import kotlin.random.Random
 import kotlin.random.Random.Default.nextDouble
 import kotlin.system.measureTimeMillis
@@ -55,7 +54,6 @@ object SIRModel {
 	val frameProp = SimpleLongProperty(0)
 	var frameTime by frameProp
 	val history: ArrayList<Triple<Int, Int, Int>> = ArrayList()
-	var isReady: Boolean = true
 	private val step_mutex = Mutex()
 	private val image_mutex = Mutex()
 
@@ -193,29 +191,13 @@ object SIRModel {
 				if (!isPaused) // this exists in case multiple instances of play() are invoked. normally pause would wait for each instance to iterate 1 more time
 				{
 					frameTime = measureTimeMillis {
-						isReady = false
 						step()
 						history.add(Triple(susceptibleCount, infectedCount, removedCount))
 					}
-					val delayTimer = minFrameTime - frameTime
-
-
-					if (delayTimer > 0 && frameTime * 1.5 < minFrameTime && minFrameTime > SIRModelView.lastUserFrameTimeSetting) {
-						minFrameTime = max((frameTime / 1.5).toLong(), SIRModelView.lastUserFrameTimeSetting)
-						delay(frameTime / 2)
-						SIRModelView.gridImage = getImage()
-						delay(frameTime / 2)
-
-					} else if (delayTimer <= 0) {
-						minFrameTime = (1.75 * (frameTime - delayTimer)).toLong()
-						delay(frameTime / 2)
-						SIRModelView.gridImage = getImage()
-						delay(frameTime / 2)
-					} else {
-						delay(delayTimer / 2)
-						SIRModelView.gridImage = getImage()
-						delay(delayTimer / 2)
+					if(minFrameTime - frameTime > 0) {
+						delay(minFrameTime - frameTime)
 					}
+					image_mutex.withLock { SIRModelView.gridImage = getImage() }
 				}
 			}
 		}

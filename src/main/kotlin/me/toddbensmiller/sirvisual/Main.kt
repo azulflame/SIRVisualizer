@@ -3,7 +3,6 @@ package me.toddbensmiller.sirvisual
 import me.toddbensmiller.sirvisual.gui.SIRGUIApp
 import tornadofx.*
 import com.natpryce.konfig.*
-import javafx.scene.image.Image
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
