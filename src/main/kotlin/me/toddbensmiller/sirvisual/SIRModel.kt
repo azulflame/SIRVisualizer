@@ -26,7 +26,7 @@ import kotlin.system.measureTimeMillis
 
 
 object SIRModel {
-	private var size: Int = 450
+	var size: Int = 450
 	private var grid: Array<Array<SIRState>> = Array(size) { Array(size) { SIRState.SUSCEPTIBLE } }
 
 	val radiusProp = SimpleIntegerProperty(8)
@@ -80,11 +80,7 @@ object SIRModel {
 		this.infectedToRemovedChance = infectedToRemovedChance
 		this.removedToSusceptibleChance = removedToSusceptibleChance
 		this.isSIRS = isSIRS
-		//susceptibleCount = size * size
 		initialCount = initial
-		GlobalScope.launch { reset() }
-		GlobalScope.launch { updateImage() }
-
 	}
 
 
