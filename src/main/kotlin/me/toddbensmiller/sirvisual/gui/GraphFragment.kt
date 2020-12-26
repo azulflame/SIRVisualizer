@@ -10,25 +10,24 @@ import tornadofx.series
 /*
  * Created by Todd on 11/24/2020.
  */
-class GraphFragment: Fragment()
-{
+class GraphFragment : Fragment() {
 	override val root = linechart("Population vs Time", NumberAxis(), NumberAxis()) {
 		series("Susceptible")
 		{
 			SIRModel.history.indices.forEach { x ->
-				data(x,SIRModel.history[x].first)
+				data(x, SIRModel.history[x].first)
 			}
 		}
 		series("Infected")
 		{
 			SIRModel.history.indices.forEach { x ->
-				data(x,SIRModel.history[x].second)
+				data(x, SIRModel.history[x].second)
 			}
 		}
 		series("Removed")
 		{
 			SIRModel.history.indices.forEach { x ->
-				data(x,SIRModel.history[x].third)
+				data(x, SIRModel.history[x].third)
 			}
 		}
 	}

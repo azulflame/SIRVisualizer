@@ -198,7 +198,7 @@ object SIRModel {
 						step()
 						history.add(Triple(susceptibleCount, infectedCount, removedCount))
 					}
-					if(minFrameTime - frameTime > 0) {
+					if (minFrameTime - frameTime > 0) {
 						delay(minFrameTime - frameTime)
 					}
 					image_mutex.withLock { SIRModelView.gridImage = getImage() }

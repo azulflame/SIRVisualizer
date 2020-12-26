@@ -5,4 +5,4 @@ package me.toddbensmiller.sirvisual.gui
  */
 import tornadofx.App
 
-class SIRGUIApp: App(SIRModelView::class)
+class SIRGUIApp : App(SIRModelView::class)
