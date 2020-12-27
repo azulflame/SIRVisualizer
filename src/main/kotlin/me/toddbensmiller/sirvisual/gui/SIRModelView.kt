@@ -15,7 +15,7 @@ import kotlin.math.roundToLong
  * Created by Todd on 11/14/2020.
  */
 
-class SIRModelView : View() {
+class SIRModelView : View("SIR Visualizer") {
 
 
 	companion object {
@@ -29,7 +29,6 @@ class SIRModelView : View() {
 			group {
 				imageview {
 					image = gridImage
-					SIRModel.getImage()
 					gridImageProp.onChange {
 						image = gridImage
 					}
@@ -186,14 +185,13 @@ class SIRModelView : View() {
 							{
 								hbox {
 									slider {
-										min = 15.0
-										max = 1000.0
+										min = 0.0
+										max = 100.0
 										value = SIRModel.minFrameTime.toDouble()
 										valueProperty().onChange { x ->
-											val y = (x / 5).roundToLong() * 5
+											val y = x.roundToLong()
 											SIRModel.minFrameTime = y
 											value = y.toDouble()
-											lastUserFrameTimeSetting = y
 										}
 									}
 									label {
@@ -201,10 +199,6 @@ class SIRModelView : View() {
 										SIRModel.minFrameProp.onChange { x ->
 											Platform.runLater {
 												text = "$x ms"
-												textFill = when {
-													lastUserFrameTimeSetting < x -> Color.RED
-													else -> Color.BLACK
-												}
 											}
 										}
 									}

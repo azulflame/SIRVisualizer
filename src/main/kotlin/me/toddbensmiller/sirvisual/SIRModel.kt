@@ -10,19 +10,25 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleLongProperty
 import javafx.scene.image.WritableImage
 import javafx.scene.paint.Color
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import me.toddbensmiller.sirvisual.gui.SIRModelView
 import tornadofx.getValue
 import tornadofx.setValue
+import java.lang.Math.pow
 import kotlin.math.abs
-import kotlin.random.Random
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.random.Random.Default.nextDouble
+import kotlin.random.Random.Default.nextInt
 import kotlin.system.measureTimeMillis
 
 
 object SIRModel {
+	private var stepMutexBreakWanted = false
 	private var size: Int = 450
 	private var grid: Array<Array<SIRState>> = Array(size) { Array(size) { SIRState.SUSCEPTIBLE } }
 
@@ -60,6 +66,14 @@ object SIRModel {
 	private var imageOut = WritableImage(size, size)
 	private var tempImage = WritableImage(size, size)
 
+	private val infectedMap = HashSet<Int>()
+	private val freshInfectedMap = HashSet<Int>()
+	private val susceptibleMap = HashSet<Int>()
+	private val removedMap = HashSet<Int>()
+	private val freshRemovedMap = HashSet<Int>()
+
+	private fun keyToCoords(key: Int): Pair<Int, Int> = Pair(key / 450, key % 450)
+	private fun coordsToKey(x: Int, y: Int) = x * 450 + y
 
 	fun init(
 		size: Int,
@@ -79,104 +93,121 @@ object SIRModel {
 		initialCount = initial
 	}
 
+	private fun infect(x: Int, y: Int) {
+		val hash = coordsToKey(x, y)
+		susceptibleMap.remove(hash)
+		grid[x][y] = SIRState.INFECTED
+		freshInfectedMap.add(hash)
+	}
 
-	fun setStateOfCell(row: Int, col: Int, state: SIRState) {
-		if (row < 0 || col < 0 || row >= grid.size || col >= grid[row].size)
-			return
-		if (grid[row][col] != state) {
-			when (state) {
-				SIRState.REMOVED -> removedCount++
-				SIRState.INFECTED -> infectedCount++
-				SIRState.SUSCEPTIBLE -> susceptibleCount++
-				else -> {
+	private fun initialInfect(x: Int, y: Int) {
+		val hash = coordsToKey(x, y)
+		susceptibleMap.remove(hash)
+		grid[x][y] = SIRState.INFECTED
+		infectedMap.add(hash)
+	}
+
+	private fun decay(x: Int, y: Int) {
+		val hash = coordsToKey(x, y)
+		infectedMap.remove(hash)
+		grid[x][y] = SIRState.REMOVED
+		freshRemovedMap.add(hash)
+	}
+
+	private fun reintroduce(x: Int, y: Int) {
+		val hash = coordsToKey(x, y)
+		removedMap.remove(hash)
+		grid[x][y] = SIRState.SUSCEPTIBLE
+		susceptibleMap.add(hash)
+	}
+
+	private fun processGrid() {
+		// use the map of lesser size (will normally be the infected cells map, with default parameters
+		if (susceptibleMap.size < infectedMap.size) {
+			// infect using the susceptible cells
+			for (cell in susceptibleMap.toSet()) {
+				val coords = keyToCoords(cell)
+				val x = coords.first
+				val y = coords.second
+
+				// determine the in-range cells of this cell
+				val xRangeMin = max(0, x - neighborRadius)
+				val xRangeMax = min(size - 1, x + neighborRadius)
+				val yRangeMin = max(0, y - neighborRadius)
+				val yRangeMax = min(size - 1, y + neighborRadius)
+
+				var localInfCount = 0
+				for (xval in xRangeMin..xRangeMax) {
+					for (hash in (450 * xval) + yRangeMin..(450 * xval) + yRangeMax) {
+						if (infectedMap.contains(hash)) {
+							localInfCount++
+						}
+					}
+				}
+				if (localInfCount > 0 && nextDouble() < 1 - pow(
+						1 - susceptibleToInfectedChance,
+						localInfCount.toDouble()
+					)
+				) {
+					infect(x, y)
 				}
 			}
-			when (grid[row][col]) {
-				SIRState.REMOVED -> removedCount--
-				SIRState.INFECTED -> infectedCount--
-				SIRState.SUSCEPTIBLE -> susceptibleCount--
-				else -> {
+		} else {
+			// infect using infected cells to get random susceptible cells
+			for (cell in infectedMap.toSet()) {
+				val coords = keyToCoords(cell)
+				val x = coords.first
+				val y = coords.second
+
+				// determine the in-range cells of this cell
+				val xRangeMin = max(0, x - neighborRadius)
+				val xRangeMax = min(size - 1, x + neighborRadius)
+				val yRangeMin = max(0, y - neighborRadius)
+				val yRangeMax = min(size - 1, y + neighborRadius)
+
+				for (dx in xRangeMin..xRangeMax) {
+					for (hash in (450 * dx + yRangeMin)..(450 * dx + yRangeMax)) {
+						if (susceptibleMap.contains(hash)) {
+							if (nextDouble() < susceptibleToInfectedChance) {
+								keyToCoords(hash).let { infect(it.first, it.second) }
+							}
+						}
+					}
 				}
 			}
 		}
-		grid[row][col] = state
+		// decay cells to removed
+		for (cell in infectedMap.toSet()) {
+			if (nextDouble() < infectedToRemovedChance) {
+				keyToCoords(cell).let { decay(it.first, it.second) }
+			}
+		}
+		// if we are using the SIRS model, reintroduce removed cells as susceptible
+		if (isSIRS) {
+			for (cell in removedMap.toSet()) {
+				if (nextDouble() < removedToSusceptibleChance) {
+					keyToCoords(cell).let { reintroduce(it.first, it.second) }
+				}
+			}
+		}
+
+		// load all new cells into their appropriate states
+		infectedMap.addAll(freshInfectedMap)
+		freshInfectedMap.clear()
+		removedMap.addAll(freshRemovedMap)
+		freshRemovedMap.clear()
+
+		infectedCount = infectedMap.size
+		susceptibleCount = susceptibleMap.size
+		removedCount = removedMap.size
 	}
 
 
 	private suspend fun step() {
-		identifyChanges()
-		applyChanges()
-	}
-
-	private suspend fun identifyChanges() {
-		image_mutex.withLock {
-			for (row in size - 1 downTo 0) {
-				for (col in size - 1 downTo 0) {
-					if (grid[row][col] == SIRState.INFECTED_DECAY_ONLY) {
-						if (nextDouble() < infectedToRemovedChance) {
-							grid[row][col] = SIRState.REMOVED_TRANSITION
-						}
-					} else if (grid[row][col] == SIRState.INFECTED) {
-						var hasSusNearby = isSIRS
-						for (verticalOffset in -neighborRadius..neighborRadius) {
-							if (row + verticalOffset in 0 until size) {
-								val taxiRadius = neighborRadius - abs(verticalOffset) // taxicab radius
-								for (horizontalOffset in -taxiRadius..taxiRadius) {
-									if (col + horizontalOffset in 0 until size) {
-										if (grid[row + verticalOffset][col + horizontalOffset] == SIRState.SUSCEPTIBLE) {
-											hasSusNearby = true
-											if (nextDouble() < susceptibleToInfectedChance) {
-												grid[row + verticalOffset][col + horizontalOffset] =
-													SIRState.INFECTED_TRANSITION
-											}
-										}
-									}
-								}
-							}
-						}
-						if (!hasSusNearby) {
-							grid[row][col] = SIRState.INFECTED_DECAY_ONLY
-						}
-						if (nextDouble() < infectedToRemovedChance) {
-							grid[row][col] = SIRState.REMOVED_TRANSITION
-						}
-					} else if (isSIRS && grid[row][col] == SIRState.REMOVED) {
-						if (nextDouble() < removedToSusceptibleChance) {
-							grid[row][col] = SIRState.SUSCEPTIBLE_TRANSITION
-						}
-					}
-				}
-			}
-		}
-	}
-
-	private suspend fun applyChanges() {
-		image_mutex.withLock {
-			for (row in grid.indices) {
-				for (col in grid[row].indices) {
-					when {
-						grid[row][col] == SIRState.INFECTED_TRANSITION -> {
-							grid[row][col] = SIRState.INFECTED
-							infectedCount++
-							susceptibleCount--
-						}
-						grid[row][col] == SIRState.SUSCEPTIBLE_TRANSITION -> {
-							grid[row][col] = SIRState.SUSCEPTIBLE
-							removedCount--
-							susceptibleCount++
-						}
-						grid[row][col] == SIRState.REMOVED_TRANSITION -> {
-							grid[row][col] = SIRState.REMOVED
-							removedCount++
-							infectedCount--
-						}
-					}
-				}
-			}
-		}
+		processGrid()
 		updateImage()
+		SIRModelView.gridImage = getImage()
 	}
-
 
 	private fun getColorOfCell(row: Int, col: Int): Color {
 		return when (grid[row][col]) {
@@ -194,14 +225,12 @@ object SIRModel {
 			step_mutex.withLock {
 				if (!isPaused) // this exists in case multiple instances of play() are invoked. normally pause would wait for each instance to iterate 1 more time
 				{
-					frameTime = measureTimeMillis {
-						step()
-						history.add(Triple(susceptibleCount, infectedCount, removedCount))
+					val milliTime = measureTimeMillis {
+						GlobalScope.launch { step() }.join()
+						GlobalScope.launch { SIRModelView.gridImage = getImage() }.join()
 					}
-					if (minFrameTime - frameTime > 0) {
-						delay(minFrameTime - frameTime)
-					}
-					image_mutex.withLock { SIRModelView.gridImage = getImage() }
+					delay(minFrameTime - milliTime)
+					history.add(Triple(susceptibleCount, infectedCount, removedCount))
 				}
 			}
 		}
@@ -214,14 +243,23 @@ object SIRModel {
 	suspend fun reset() {
 		isPaused = true
 		step_mutex.withLock {
+			// hard reset everything, since we have no garuntee of a clean exit from whatever the previous state was
 			grid = Array(size) { Array(size) { SIRState.SUSCEPTIBLE } }
-			susceptibleCount = size * size
-			infectedCount = 0
-			removedCount = 0
-			vaccinatedCount = 0
-			for (x in 1..initialCount) {
-				setStateOfCell(Random.nextInt(300) + 50, Random.nextInt(300) + 50, SIRState.INFECTED)
+			susceptibleMap.clear()
+			removedMap.clear()
+			infectedMap.clear()
+			freshRemovedMap.clear()
+			freshInfectedMap.clear()
+			for (cell in 0 until (size * size - 1)) {
+				susceptibleMap.add(cell)
 			}
+			for (x in 1..initialCount) {
+				initialInfect(nextInt(50, 400), nextInt(50, 400))
+			}
+			susceptibleCount = susceptibleMap.size
+			removedCount = removedMap.size
+			infectedCount = infectedMap.size
+
 			updateImage()
 			history.clear()
 			SIRModelView.gridImage = getImage()

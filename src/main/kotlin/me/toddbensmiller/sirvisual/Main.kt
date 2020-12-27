@@ -34,7 +34,6 @@ fun main(args: Array<String>) {
 		config[initial]
 	)
 
-	SIRModel.setStateOfCell(nextInt(300) + 50, nextInt(300) + 50, SIRState.INFECTED)
 	GlobalScope.launch { SIRModel.reset() }
 	launch<SIRGUIApp>(args)
 
