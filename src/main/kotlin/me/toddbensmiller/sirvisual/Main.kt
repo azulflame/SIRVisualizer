@@ -6,7 +6,6 @@ import kotlinx.coroutines.launch
 import me.toddbensmiller.sirvisual.gui.SIRGUIApp
 import tornadofx.launch
 import java.io.File
-import kotlin.random.Random.Default.nextInt
 
 /*
  * Created by Todd on 11/13/2020.

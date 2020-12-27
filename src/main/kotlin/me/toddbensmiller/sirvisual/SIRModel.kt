@@ -18,17 +18,15 @@ import kotlinx.coroutines.sync.withLock
 import me.toddbensmiller.sirvisual.gui.SIRModelView
 import tornadofx.getValue
 import tornadofx.setValue
-import java.lang.Math.pow
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.random.Random.Default.nextDouble
 import kotlin.random.Random.Default.nextInt
 import kotlin.system.measureTimeMillis
 
 
 object SIRModel {
-	private var stepMutexBreakWanted = false
 	private var size: Int = 450
 	private var grid: Array<Array<SIRState>> = Array(size) { Array(size) { SIRState.SUSCEPTIBLE } }
 
@@ -55,10 +53,8 @@ object SIRModel {
 	var susceptibleCount by sProp
 	val rProp = SimpleIntegerProperty(0)
 	var removedCount by rProp
-	private val vProp = SimpleIntegerProperty(0)
-	private var vaccinatedCount by vProp
-	private val frameProp = SimpleLongProperty(0)
-	private var frameTime by frameProp
+	//private val vProp = SimpleIntegerProperty(0)
+	//private var vaccinatedCount by vProp
 	val history: ArrayList<Triple<Int, Int, Int>> = ArrayList()
 	private val step_mutex = Mutex()
 	private val image_mutex = Mutex()
@@ -72,8 +68,8 @@ object SIRModel {
 	private val removedMap = HashSet<Int>()
 	private val freshRemovedMap = HashSet<Int>()
 
-	private fun keyToCoords(key: Int): Pair<Int, Int> = Pair(key / 450, key % 450)
-	private fun coordsToKey(x: Int, y: Int) = x * 450 + y
+	private fun keyToCoords(key: Int): Pair<Int, Int> = Pair(key / size, key % size)
+	private fun coordsToKey(x: Int, y: Int) = x * size + y
 
 	fun init(
 		size: Int,
@@ -138,16 +134,13 @@ object SIRModel {
 
 				var localInfCount = 0
 				for (xval in xRangeMin..xRangeMax) {
-					for (hash in (450 * xval) + yRangeMin..(450 * xval) + yRangeMax) {
+					for (hash in (size * xval) + yRangeMin..(size * xval) + yRangeMax) {
 						if (infectedMap.contains(hash)) {
 							localInfCount++
 						}
 					}
 				}
-				if (localInfCount > 0 && nextDouble() < 1 - pow(
-						1 - susceptibleToInfectedChance,
-						localInfCount.toDouble()
-					)
+				if (localInfCount > 0 && nextDouble() < 1 - (1 - susceptibleToInfectedChance).pow(localInfCount.toDouble())
 				) {
 					infect(x, y)
 				}
@@ -165,8 +158,9 @@ object SIRModel {
 				val yRangeMin = max(0, y - neighborRadius)
 				val yRangeMax = min(size - 1, y + neighborRadius)
 
+				// infect cells (by chance) in the range
 				for (dx in xRangeMin..xRangeMax) {
-					for (hash in (450 * dx + yRangeMin)..(450 * dx + yRangeMax)) {
+					for (hash in (size * dx + yRangeMin)..(size * dx + yRangeMax)) {
 						if (susceptibleMap.contains(hash)) {
 							if (nextDouble() < susceptibleToInfectedChance) {
 								keyToCoords(hash).let { infect(it.first, it.second) }
@@ -197,6 +191,7 @@ object SIRModel {
 		removedMap.addAll(freshRemovedMap)
 		freshRemovedMap.clear()
 
+		// update the size counts
 		infectedCount = infectedMap.size
 		susceptibleCount = susceptibleMap.size
 		removedCount = removedMap.size
@@ -215,7 +210,6 @@ object SIRModel {
 			SIRState.SUSCEPTIBLE -> Color.rgb(50, 250, 50)
 			SIRState.REMOVED -> Color.rgb(34, 34, 134)
 			SIRState.INFECTED_DECAY_ONLY -> Color.rgb(254, 39, 19)
-			else -> Color.BLACK
 		}
 	}
 

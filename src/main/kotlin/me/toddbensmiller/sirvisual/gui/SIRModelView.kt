@@ -21,7 +21,6 @@ class SIRModelView : View("SIR Visualizer") {
 	companion object {
 		val gridImageProp = SimpleObjectProperty(SIRModel.getImage())
 		var gridImage: WritableImage by gridImageProp
-		var lastUserFrameTimeSetting: Long = 15
 	}
 
 	override val root = stackpane {
