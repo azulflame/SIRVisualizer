@@ -7,6 +7,7 @@ import javafx.scene.paint.Color
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import me.toddbensmiller.sirvisual.SIRModel
+import me.toddbensmiller.sirvisual.SIRModel.addSize
 import tornadofx.*
 import kotlin.math.roundToInt
 
@@ -88,6 +89,28 @@ class SIRModelView : View("SIR Visualizer") {
 
 						// infection neighborhood
 						fieldset("Data Controls") {
+							field("Size")
+							{
+								hbox {
+									slider {
+										min = 100.0
+										max = 1000.0
+										value = SIRModel.size.toDouble()
+										valueProperty().onChange{ x ->
+											val y = x.roundToInt() / 10 * 10
+											GlobalScope.launch { addSize(y) }
+											value = y.toDouble()
+										}
+									}
+									label {
+										text = SIRModel.size.toString()
+										SIRModel.sizeProp.onChange { x ->
+											autosize()
+											Platform.runLater { text = "$x" }
+										}
+									}
+								}
+							}
 							field("Radius") {
 								hbox {
 									slider {
@@ -100,7 +123,6 @@ class SIRModelView : View("SIR Visualizer") {
 											value = y.toDouble()
 										}
 									}
-
 									label {
 										text = SIRModel.neighborRadius.toString()
 										SIRModel.radiusProp.onChange { x ->

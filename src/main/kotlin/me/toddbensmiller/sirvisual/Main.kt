@@ -20,12 +20,13 @@ fun main(args: Array<String>) {
 	val neighborRadius = Key("radius", intType)
 	val initial = Key("initial", intType)
 	val delay = Key("delay", intType)
+	val initialSize = Key("size", intType)
 
 	val config = ConfigurationProperties.fromFile(File("sirs.properties")) overriding
 			ConfigurationProperties.fromResource("default.properties")
 
 	SIRModel.init(
-		450,
+		config[initialSize],
 		config[neighborRadius],
 		config[sToIRate],
 		config[iToRRate],

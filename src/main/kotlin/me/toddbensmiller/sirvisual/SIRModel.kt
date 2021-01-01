@@ -19,6 +19,9 @@ import me.toddbensmiller.sirvisual.gui.GraphFragment
 import me.toddbensmiller.sirvisual.gui.SIRModelView
 import tornadofx.getValue
 import tornadofx.setValue
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashSet
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -28,7 +31,10 @@ import kotlin.system.measureTimeMillis
 
 
 object SIRModel {
-	private var size: Int = 450
+	val sizeProp = SimpleIntegerProperty(450)
+	var size by sizeProp
+	private val sizeStack = Stack<Int>()
+
 	private var grid: Array<Array<SIRState>> = Array(size) { Array(size) { SIRState.SUSCEPTIBLE } }
 
 	val radiusProp = SimpleIntegerProperty(8)
@@ -68,7 +74,6 @@ object SIRModel {
 	private val susceptibleMap = HashSet<Int>()
 	private val removedMap = HashSet<Int>()
 	private val freshRemovedMap = HashSet<Int>()
-
 
 	private fun keyToCoords(key: Int): Pair<Int, Int> = Pair(key / size, key % size)
 	private fun coordsToKey(x: Int, y: Int) = x * size + y
@@ -144,6 +149,7 @@ object SIRModel {
 						}
 					}
 				}
+				// use binomial distribution to find the chance that "at least one" cell will infect this way
 				if (localInfCount > 0 && nextDouble() < 1 - (1 - susceptibleToInfectedChance).pow(localInfCount.toDouble())
 				) {
 					infect(x, y)
@@ -240,7 +246,7 @@ object SIRModel {
 		isPaused = true
 	}
 
-	fun end() {
+	private fun end() {
 		pause()
 		val graph = GraphFragment()
 		Platform.runLater { graph.openWindow() }
@@ -267,7 +273,7 @@ object SIRModel {
 				susceptibleMap.add(cell)
 			}
 			for (x in 1..initialCount) {
-				initialInfect(nextInt(50, 400), nextInt(50, 400))
+				initialInfect(nextInt((.1*size).toInt(), (.9*size).toInt()), nextInt((.1*size).toInt(), (.9*size).toInt()))
 			}
 			susceptibleCount = susceptibleMap.size
 			removedCount = removedMap.size
@@ -300,5 +306,28 @@ object SIRModel {
 			tempImage = WritableImage(size, size)
 		}
 	}
-}
 
+	private suspend fun resize(newSize: Int) {
+		pause()
+		println("Entered resize with new size of $newSize")
+		step_mutex.withLock {
+			image_mutex.withLock {
+				size = newSize
+				tempImage = WritableImage(size, size)
+			}
+		}
+		println("$size $newSize")
+		reset()
+	}
+
+	suspend fun addSize(newSize: Int) { // debounce for resize
+		println("added resize request of $newSize")
+		sizeStack.add(newSize)
+		val oldSize = sizeStack.size
+		delay(250)
+		if (sizeStack.size == oldSize && newSize == sizeStack.peek()) {
+			resize(sizeStack.pop())
+			sizeStack.clear()
+		}
+	}
+}
