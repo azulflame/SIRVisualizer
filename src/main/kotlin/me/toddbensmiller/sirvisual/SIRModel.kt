@@ -4,10 +4,10 @@
 
 package me.toddbensmiller.sirvisual
 
+import javafx.application.Platform
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.property.SimpleIntegerProperty
-import javafx.beans.property.SimpleLongProperty
 import javafx.scene.image.WritableImage
 import javafx.scene.paint.Color
 import kotlinx.coroutines.GlobalScope
@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import me.toddbensmiller.sirvisual.gui.GraphFragment
 import me.toddbensmiller.sirvisual.gui.SIRModelView
 import tornadofx.getValue
 import tornadofx.setValue
@@ -40,7 +41,7 @@ object SIRModel {
 	var removedToSusceptibleChance by recycleProp
 	val sirsProp = SimpleBooleanProperty(false)
 	var isSIRS by sirsProp
-	val minFrameProp = SimpleLongProperty(16)
+	val minFrameProp = SimpleIntegerProperty(16)
 	var minFrameTime by minFrameProp
 	val initialProp = SimpleIntegerProperty(1)
 	var initialCount by initialProp
@@ -68,6 +69,7 @@ object SIRModel {
 	private val removedMap = HashSet<Int>()
 	private val freshRemovedMap = HashSet<Int>()
 
+
 	private fun keyToCoords(key: Int): Pair<Int, Int> = Pair(key / size, key % size)
 	private fun coordsToKey(x: Int, y: Int) = x * size + y
 
@@ -78,7 +80,8 @@ object SIRModel {
 		infectedToRemovedChance: Double,
 		removedToSusceptibleChance: Double,
 		isSIRS: Boolean,
-		initial: Int
+		initial: Int,
+		delay: Int
 	) {
 		this.size = size
 		this.neighborRadius = neighborRadius
@@ -87,6 +90,7 @@ object SIRModel {
 		this.removedToSusceptibleChance = removedToSusceptibleChance
 		this.isSIRS = isSIRS
 		initialCount = initial
+		this.minFrameTime = delay
 	}
 
 	private fun infect(x: Int, y: Int) {
@@ -209,7 +213,6 @@ object SIRModel {
 			SIRState.INFECTED -> Color.rgb(254, 39, 18)
 			SIRState.SUSCEPTIBLE -> Color.rgb(50, 250, 50)
 			SIRState.REMOVED -> Color.rgb(34, 34, 134)
-			SIRState.INFECTED_DECAY_ONLY -> Color.rgb(254, 39, 19)
 		}
 	}
 
@@ -225,6 +228,9 @@ object SIRModel {
 					}
 					delay(minFrameTime - milliTime)
 					history.add(Triple(susceptibleCount, infectedCount, removedCount))
+					if (infectedCount == 0) {
+						end()
+					}
 				}
 			}
 		}
@@ -232,6 +238,19 @@ object SIRModel {
 
 	fun pause() {
 		isPaused = true
+	}
+
+	fun end() {
+		pause()
+		val graph = GraphFragment()
+		Platform.runLater { graph.openWindow() }
+	}
+	suspend fun invokeEnd()
+	{
+		pause()
+		step_mutex.withLock {
+			end()
+		}
 	}
 
 	suspend fun reset() {

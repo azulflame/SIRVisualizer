@@ -9,7 +9,6 @@ import kotlinx.coroutines.launch
 import me.toddbensmiller.sirvisual.SIRModel
 import tornadofx.*
 import kotlin.math.roundToInt
-import kotlin.math.roundToLong
 
 /*
  * Created by Todd on 11/14/2020.
@@ -25,12 +24,10 @@ class SIRModelView : View("SIR Visualizer") {
 
 	override val root = stackpane {
 		hbox {
-			group {
-				imageview {
+			imageview {
+				image = gridImage
+				gridImageProp.onChange {
 					image = gridImage
-					gridImageProp.onChange {
-						image = gridImage
-					}
 				}
 			}
 			vbox {
@@ -42,6 +39,9 @@ class SIRModelView : View("SIR Visualizer") {
 					}
 					button("PAUSE").action {
 						SIRModel.pause()
+					}
+					button("END").action {
+						GlobalScope.launch { SIRModel.invokeEnd() }
 					}
 					button("RESET").action {
 						GlobalScope.launch { SIRModel.reset() }
@@ -188,7 +188,7 @@ class SIRModelView : View("SIR Visualizer") {
 										max = 100.0
 										value = SIRModel.minFrameTime.toDouble()
 										valueProperty().onChange { x ->
-											val y = x.roundToLong()
+											val y = x.roundToInt()
 											SIRModel.minFrameTime = y
 											value = y.toDouble()
 										}

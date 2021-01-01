@@ -19,6 +19,7 @@ fun main(args: Array<String>) {
 	val isSIRS = Key("isSIRS", booleanType)
 	val neighborRadius = Key("radius", intType)
 	val initial = Key("initial", intType)
+	val delay = Key("delay", intType)
 
 	val config = ConfigurationProperties.fromFile(File("sirs.properties")) overriding
 			ConfigurationProperties.fromResource("default.properties")
@@ -30,7 +31,8 @@ fun main(args: Array<String>) {
 		config[iToRRate],
 		config[rToSRate],
 		config[isSIRS],
-		config[initial]
+		config[initial],
+		config[delay]
 	)
 
 	GlobalScope.launch { SIRModel.reset() }
