@@ -10,10 +10,10 @@ import tornadofx.*
 class GraphFragment : Fragment() {
 	override val root = linechart("Population vs Time", NumberAxis(), NumberAxis()) {
 		createSymbols = false
-		multiseries("Susceptible", "Infected", "Removed")
+		multiseries("Infected", "Removed", "Susceptible")
 		{
 			SIRModel.history.forEachIndexed { i, (first, second, third) ->
-				data(i, first, second, third)
+				data(i, second, third, first)
 			}
 		}
 	}
