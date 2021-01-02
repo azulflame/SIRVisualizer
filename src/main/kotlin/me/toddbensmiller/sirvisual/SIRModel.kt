@@ -20,7 +20,6 @@ import me.toddbensmiller.sirvisual.gui.SIRModelView
 import tornadofx.getValue
 import tornadofx.setValue
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 import kotlin.math.max
 import kotlin.math.min
@@ -35,7 +34,7 @@ object SIRModel {
 	var size by sizeProp
 	private val sizeStack = Stack<Int>()
 
-	private var grid: Array<Array<SIRState>> = Array(size) { Array(size) { SIRState.SUSCEPTIBLE } }
+	lateinit private var grid: Array<Array<SIRState>>
 
 	val radiusProp = SimpleIntegerProperty(8)
 	var neighborRadius by radiusProp
@@ -45,8 +44,12 @@ object SIRModel {
 	var infectedToRemovedChance by recRateProp
 	val recycleProp = SimpleDoubleProperty(0.03)
 	var removedToSusceptibleChance by recycleProp
+	val vaccProp = SimpleDoubleProperty(0.01)
+	var vaccRate by vaccProp
 	val sirsProp = SimpleBooleanProperty(false)
 	var isSIRS by sirsProp
+	val vaccToggleProp = SimpleBooleanProperty(false)
+	private var vaccToggle by vaccToggleProp
 	val minFrameProp = SimpleIntegerProperty(16)
 	var minFrameTime by minFrameProp
 	val initialProp = SimpleIntegerProperty(1)
@@ -60,20 +63,22 @@ object SIRModel {
 	var susceptibleCount by sProp
 	val rProp = SimpleIntegerProperty(0)
 	var removedCount by rProp
-	//private val vProp = SimpleIntegerProperty(0)
-	//private var vaccinatedCount by vProp
-	val history: ArrayList<Triple<Int, Int, Int>> = ArrayList()
+	val vProp = SimpleIntegerProperty(0)
+	var vaccinatedCount by vProp
+
+	val history: MutableList<History> = mutableListOf()
 	private val step_mutex = Mutex()
 	private val image_mutex = Mutex()
 
 	private var imageOut = WritableImage(size, size)
-	private var tempImage = WritableImage(size, size)
+	lateinit private var tempImage: WritableImage
 
 	private val infectedMap = HashSet<Int>()
 	private val freshInfectedMap = HashSet<Int>()
 	private val susceptibleMap = HashSet<Int>()
 	private val removedMap = HashSet<Int>()
 	private val freshRemovedMap = HashSet<Int>()
+	private val vaccMap = HashSet<Int>()
 
 	private fun keyToCoords(key: Int): Pair<Int, Int> = Pair(key / size, key % size)
 	private fun coordsToKey(x: Int, y: Int) = x * size + y
@@ -126,8 +131,25 @@ object SIRModel {
 		susceptibleMap.add(hash)
 	}
 
+	private fun vaccinate(x: Int, y: Int)
+	{
+		val hash = coordsToKey(x, y)
+		susceptibleMap.remove(hash)
+		grid[x][y] = SIRState.VACCINATED
+		vaccMap.add(hash)
+	}
+
 	private fun processGrid() {
 		// use the map of lesser size (will normally be the infected cells map, with default parameters
+		if(vaccToggle)
+		{
+			susceptibleMap.toSet().forEach { cell ->
+				if(nextDouble() < vaccRate)
+				{
+					keyToCoords(cell).let { vaccinate(it.first, it.second)}
+				}
+			}
+		}
 		if (susceptibleMap.size < infectedMap.size) {
 			// infect using the susceptible cells
 			for (cell in susceptibleMap.toSet()) {
@@ -205,6 +227,7 @@ object SIRModel {
 		infectedCount = infectedMap.size
 		susceptibleCount = susceptibleMap.size
 		removedCount = removedMap.size
+		vaccinatedCount = vaccMap.size
 	}
 
 
@@ -216,9 +239,10 @@ object SIRModel {
 
 	private fun getColorOfCell(row: Int, col: Int): Color {
 		return when (grid[row][col]) {
-			SIRState.INFECTED -> Color.rgb(254, 39, 18)
-			SIRState.SUSCEPTIBLE -> Color.rgb(50, 250, 50)
-			SIRState.REMOVED -> Color.rgb(34, 34, 134)
+			SIRState.INFECTED -> SIRColors.i
+			SIRState.SUSCEPTIBLE -> SIRColors.s
+			SIRState.REMOVED -> SIRColors.r
+			SIRState.VACCINATED -> SIRColors.v
 		}
 	}
 
@@ -233,7 +257,7 @@ object SIRModel {
 						GlobalScope.launch { SIRModelView.gridImage = getImage() }.join()
 					}
 					delay(minFrameTime - milliTime)
-					history.add(Triple(susceptibleCount, infectedCount, removedCount))
+					history.add(History(susceptibleCount, infectedCount, removedCount, vaccinatedCount))
 					if (infectedCount == 0) {
 						end()
 					}
@@ -251,8 +275,8 @@ object SIRModel {
 		val graph = GraphFragment()
 		Platform.runLater { graph.openWindow() }
 	}
-	suspend fun invokeEnd()
-	{
+
+	suspend fun invokeEnd() {
 		pause()
 		step_mutex.withLock {
 			end()
@@ -264,6 +288,7 @@ object SIRModel {
 		step_mutex.withLock {
 			// hard reset everything, since we have no garuntee of a clean exit from whatever the previous state was
 			grid = Array(size) { Array(size) { SIRState.SUSCEPTIBLE } }
+			tempImage = WritableImage(size, size)
 			susceptibleMap.clear()
 			removedMap.clear()
 			infectedMap.clear()
@@ -278,6 +303,7 @@ object SIRModel {
 			susceptibleCount = susceptibleMap.size
 			removedCount = removedMap.size
 			infectedCount = infectedMap.size
+			vaccinatedCount = vaccMap.size
 
 			updateImage()
 			history.clear()

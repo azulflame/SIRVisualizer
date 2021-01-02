@@ -6,5 +6,6 @@ package me.toddbensmiller.sirvisual
 enum class SIRState {
 	SUSCEPTIBLE,
 	INFECTED,
-	REMOVED
+	REMOVED,
+	VACCINATED
 }

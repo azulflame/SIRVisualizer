@@ -7,13 +7,44 @@ import tornadofx.*
 /*
  * Created by Todd on 11/24/2020.
  */
-class GraphFragment : Fragment() {
-	override val root = linechart("Population vs Time", NumberAxis(), NumberAxis()) {
+class GraphFragment : Fragment("Population Graph") {
+
+	private val timeAxis = NumberAxis()
+
+	init {
+		timeAxis.label = "Time"
+	}
+
+	private val popAxis = NumberAxis()
+
+	init {
+		popAxis.label = "Population"
+	}
+
+	override val root = linechart("", timeAxis, popAxis) {
 		createSymbols = false
-		multiseries("Infected", "Removed", "Susceptible")
+		series("Susceptible") {
+
+			SIRModel.history.forEachIndexed { i, x ->
+				data(i, x.s)
+			}
+		}
+		series("Infected")
 		{
-			SIRModel.history.forEachIndexed { i, (first, second, third) ->
-				data(i, second, third, first)
+			SIRModel.history.forEachIndexed { i, x ->
+				data(i, x.i)
+			}
+		}
+		series("Removed")
+		{
+			SIRModel.history.forEachIndexed { i, x ->
+				data(i, x.r)
+			}
+		}
+		series("Vaccinated")
+		{
+			SIRModel.history.forEachIndexed { i, x ->
+				data(i, x.v)
 			}
 		}
 	}

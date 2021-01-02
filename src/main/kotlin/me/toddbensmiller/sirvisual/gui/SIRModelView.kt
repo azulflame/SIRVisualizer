@@ -3,9 +3,9 @@ package me.toddbensmiller.sirvisual.gui
 import javafx.application.Platform
 import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.image.WritableImage
-import javafx.scene.paint.Color
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import me.toddbensmiller.sirvisual.SIRColors
 import me.toddbensmiller.sirvisual.SIRModel
 import me.toddbensmiller.sirvisual.SIRModel.addSize
 import tornadofx.*
@@ -19,8 +19,83 @@ class SIRModelView : View("SIR Visualizer") {
 
 
 	companion object {
+		var sizeMin = 10.0
+		var sizeMax = 1000.0
+		var sizeStep = 10.0
+
+		var radiusMin = 1.0
+		var radiusMax = 12.0
+		var radiusStep = 1.0
+
+		var infRateMin = 0.0
+		var infRateMax = 0.001
+		var infRateStep = .0005
+
+		var recoveryRateMin = 0.0
+		var recoveryRateMax = 0.25
+		var recoveryRateStep = 0.01
+
+		var recycleRateMin = 0.0
+		var recycleRateMax = 0.25
+		var recycleRateStep = 0.01
+
+		var delayMin = 0.0
+		var delayMax = 100.0
+		var delayStep = 1.0
+
+		var initialMin = 1.0
+		var initialMax = 25.0
+		var initialStep = 1.0
+
+		var vaccMin = 0.0
+		var vaccMax = 0.25
+		var vaccStep = 0.01
+
 		val gridImageProp = SimpleObjectProperty(SIRModel.getImage())
 		var gridImage: WritableImage by gridImageProp
+
+		fun setRanges(
+			sizeMin: Double, sizeMax: Double, sizeStep: Double,
+			radiusMin: Double, radiusMax: Double, radiusStep: Double,
+			infRateMin: Double, infRateMax: Double, infRateStep: Double,
+			recoveryRateMin: Double, recoveryRateMax: Double, recoveryRateStep: Double,
+			recycleRateMin: Double, recycleRateMax: Double, recycleRateStep: Double,
+			delayMin: Double, delayMax: Double, delayStep: Double,
+			initialMin: Double, initialMax: Double, initialStep: Double,
+			vaccMin: Double, vaccMax: Double, vaccStep: Double
+		) {
+			this.sizeMin = sizeMin
+			this.sizeMax = sizeMax
+			this.sizeStep = sizeStep
+
+			this.radiusMin = radiusMin
+			this.radiusMax = radiusMax
+			this.radiusStep = radiusStep
+
+			this.infRateMin = infRateMin
+			this.infRateMax = infRateMax
+			this.infRateStep = infRateStep
+
+			this.recoveryRateMin = recoveryRateMin
+			this.recoveryRateMax = recoveryRateMax
+			this.recoveryRateStep = recoveryRateStep
+
+			this.recycleRateMin = recycleRateMin
+			this.recycleRateMax = recycleRateMax
+			this.recycleRateStep = recycleRateStep
+
+			this.delayMin = delayMin
+			this.delayMax = delayMax
+			this.delayStep = delayStep
+
+			this.initialMin = initialMin
+			this.initialMax = initialMax
+			this.initialStep = initialStep
+
+			this.vaccMin = vaccMin
+			this.vaccMax = vaccMax
+			this.vaccStep = vaccStep
+		}
 	}
 
 	override val root = stackpane {
@@ -56,7 +131,7 @@ class SIRModelView : View("SIR Visualizer") {
 						{
 							label {
 								text = "${SIRModel.susceptibleCount}"
-								textFill = Color.rgb(50, 160, 50)
+								textFill = SIRColors.s
 								SIRModel.sProp.onChange { x ->
 									Platform.runLater { text = "$x" }
 								}
@@ -66,7 +141,7 @@ class SIRModelView : View("SIR Visualizer") {
 						{
 							label {
 								text = "${SIRModel.infectedCount}"
-								textFill = Color.rgb(254, 39, 18)
+								textFill = SIRColors.i
 								SIRModel.iProp.onChange { x ->
 									if (x == 0) {
 										SIRModel.pause()
@@ -79,25 +154,34 @@ class SIRModelView : View("SIR Visualizer") {
 						{
 							label {
 								text = "${SIRModel.removedCount}"
-								textFill = Color.rgb(140, 34, 34)
+								textFill = SIRColors.r
 								SIRModel.rProp.onChange { x ->
 									// Avoid throwing IllegalStateException by running from a non-JavaFX thread.
 									Platform.runLater { text = "$x" }
 								}
 							}
 						}
-
+						field("Vaccinated")
+						{
+							label {
+								text = "${SIRModel.vaccinatedCount}"
+								textFill = SIRColors.v
+								SIRModel.vProp.onChange { x ->
+									Platform.runLater { text = "$x" }
+								}
+							}
+						}
 						// infection neighborhood
 						fieldset("Data Controls") {
 							field("Size")
 							{
 								hbox {
 									slider {
-										min = 100.0
-										max = 1000.0
+										min = sizeMin
+										max = sizeMax
 										value = SIRModel.size.toDouble()
-										valueProperty().onChange{ x ->
-											val y = x.roundToInt() / 10 * 10
+										valueProperty().onChange { x ->
+											val y = roundToNearest(x, sizeStep).toInt()
 											GlobalScope.launch { addSize(y) }
 											value = y.toDouble()
 										}
@@ -114,11 +198,11 @@ class SIRModelView : View("SIR Visualizer") {
 							field("Radius") {
 								hbox {
 									slider {
-										min = 1.0
-										max = 12.0
+										min = radiusMin
+										max = radiusMax
 										value = SIRModel.neighborRadius.toDouble()
 										valueProperty().onChange { x ->
-											val y = x.roundToInt()
+											val y = roundToNearest(x, radiusStep).toInt()
 											SIRModel.neighborRadius = y
 											value = y.toDouble()
 										}
@@ -135,11 +219,11 @@ class SIRModelView : View("SIR Visualizer") {
 							{
 								hbox {
 									slider {
-										min = 0.0
-										max = 0.01
+										min = infRateMin
+										max = infRateMax
 										value = SIRModel.susceptibleToInfectedChance
 										valueProperty().onChange { x ->
-											val y = (10000 * x).roundToInt() / 10000.0
+											val y = roundToNearest(x, infRateStep)
 											SIRModel.susceptibleToInfectedChance = y
 											value = y
 										}
@@ -156,11 +240,11 @@ class SIRModelView : View("SIR Visualizer") {
 							{
 								hbox {
 									slider {
-										min = 0.0
-										max = 0.04
+										min = recoveryRateMin
+										max = recoveryRateMax
 										value = SIRModel.infectedToRemovedChance
 										valueProperty().onChange { x ->
-											val y = (10000 * x).roundToInt() / 10000.0
+											val y = roundToNearest(x, recoveryRateStep)
 											SIRModel.infectedToRemovedChance = y
 											value = y
 										}
@@ -181,11 +265,11 @@ class SIRModelView : View("SIR Visualizer") {
 							{
 								hbox {
 									slider {
-										min = 0.0
-										max = 0.1
+										min = recycleRateMin
+										max = recycleRateMax
 										value = SIRModel.removedToSusceptibleChance
 										valueProperty().onChange { x ->
-											val y = (10000 * x).roundToInt() / 10000.0
+											val y = roundToNearest(x, recycleRateStep)
 											SIRModel.removedToSusceptibleChance = y
 											value = y
 										}
@@ -202,15 +286,42 @@ class SIRModelView : View("SIR Visualizer") {
 									}
 								}
 							}
+							field("Vaccinate")
+							{
+								hbox {
+									checkbox("", SIRModel.vaccToggleProp)
+								}
+							}
+							field("Vaccination Rate")
+							{
+								hbox {
+									slider {
+										min = vaccMin
+										max = vaccMax
+										value = SIRModel.vaccRate
+										valueProperty().onChange { x ->
+											val y = roundToNearest(x, vaccStep)
+											SIRModel.vaccRate = y
+											value = y
+										}
+									}
+									label {
+										text = "${SIRModel.vaccRate}"
+										SIRModel.vaccProp.onChange { x ->
+											Platform.runLater { text = "$x" }
+										}
+									}
+								}
+							}
 							field("Minimum Frame Time")
 							{
 								hbox {
 									slider {
-										min = 0.0
-										max = 100.0
+										min = delayMin
+										max = delayMax
 										value = SIRModel.minFrameTime.toDouble()
 										valueProperty().onChange { x ->
-											val y = x.roundToInt()
+											val y = roundToNearest(x, delayStep).toInt()
 											SIRModel.minFrameTime = y
 											value = y.toDouble()
 										}
@@ -229,11 +340,11 @@ class SIRModelView : View("SIR Visualizer") {
 							{
 								hbox {
 									slider {
-										min = 1.0
-										max = 10.0
+										min = initialMin
+										max = initialMax
 										value = SIRModel.initialCount.toDouble()
 										valueProperty().onChange { x ->
-											val y = x.roundToInt()
+											val y = roundToNearest(x, initialStep).toInt()
 											SIRModel.initialCount = y
 											value = y.toDouble()
 										}
@@ -252,4 +363,8 @@ class SIRModelView : View("SIR Visualizer") {
 			}
 		}
 	}
+}
+
+fun roundToNearest(num: Double, step: Double): Double {
+	return (num / step).roundToInt() * step
 }
