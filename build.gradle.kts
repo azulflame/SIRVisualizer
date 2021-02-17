@@ -14,7 +14,7 @@ javafx {
 }
 
 application {
-	mainClassName = "me.toddbensmiller.sirvisual.MainKt"
+	getMainClass().set("me.toddbensmiller.sirvisual.Mainkt")
 }
 
 group = "me.toddbensmiller.sirvisual"
@@ -25,7 +25,6 @@ repositories {
 	mavenCentral()
 }
 dependencies {
-/*    testImplementation(kotlin("test-junit"))*/
 	// imgui deps
 	implementation("no.tornado:tornadofx:1.7.20")
 	implementation("com.natpryce:konfig:1.6.10.0")    // for the properties file
@@ -38,10 +37,10 @@ tasks.withType<KotlinCompile> {
 }
 
 val fatJar = task("fatJar", type = Jar::class) {
-    baseName = "${project.name}-fat"
+	archiveBaseName.set("${project.name}-fat")
     manifest {
         attributes["Implementation-Title"] = "SIR Visualizer"
-        attributes["Implementation-Version"] = version
+        attributes["Implementation-Version"] = archiveVersion
         attributes["Main-Class"] = "me.toddbensmiller.sirvisual.Main"
     }
     from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
