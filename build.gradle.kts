@@ -3,8 +3,14 @@ import org.gradle.jvm.tasks.Jar
 
 
 plugins {
-	kotlin("jvm") version "1.4.10"
+	kotlin("jvm") version "1.4.30"
+	id("org.openjfx.javafxplugin") version "0.0.8"
 	application
+}
+
+javafx {
+    version = "11.0.2"
+    modules = listOf("javafx.controls", "javafx.graphics")
 }
 
 application {
@@ -24,12 +30,11 @@ dependencies {
 	implementation("no.tornado:tornadofx:1.7.20")
 	implementation("com.natpryce:konfig:1.6.10.0")    // for the properties file
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1")
-
 }
 
 
 tasks.withType<KotlinCompile> {
-	kotlinOptions.jvmTarget = "1.8"
+	kotlinOptions.jvmTarget = "11"
 }
 
 val fatJar = task("fatJar", type = Jar::class) {
