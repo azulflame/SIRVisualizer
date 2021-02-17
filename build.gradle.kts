@@ -14,7 +14,7 @@ javafx {
 }
 
 application {
-	getMainClass().set("me.toddbensmiller.sirvisual.Mainkt")
+	getMainClass().set("me.toddbensmiller.sirvisual.MainKt")
 }
 
 group = "me.toddbensmiller.sirvisual"
