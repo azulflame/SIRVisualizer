@@ -91,5 +91,4 @@ fun main(args: Array<String>) {
 
 	GlobalScope.launch { SIRModel.reset() }
 	launch<SIRGUIApp>(args)
-
 }
