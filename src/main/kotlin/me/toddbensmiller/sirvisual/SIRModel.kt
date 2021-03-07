@@ -34,7 +34,7 @@ object SIRModel {
 	var size by sizeProp
 	private val sizeStack = Stack<Int>()
 
-	lateinit private var grid: Array<Array<SIRState>>
+	private lateinit var grid: Array<Array<SIRState>>
 
 	val radiusProp = SimpleIntegerProperty(8)
 	var neighborRadius by radiusProp
@@ -71,7 +71,7 @@ object SIRModel {
 	private val image_mutex = Mutex()
 
 	private var imageOut = WritableImage(size, size)
-	lateinit private var tempImage: WritableImage
+	private lateinit var tempImage: WritableImage
 
 	private val infectedMap = HashSet<Int>()
 	private val freshInfectedMap = HashSet<Int>()
@@ -91,7 +91,8 @@ object SIRModel {
 		removedToSusceptibleChance: Double,
 		isSIRS: Boolean,
 		initial: Int,
-		delay: Int
+		delay: Int,
+		vaccRate: Double
 	) {
 		this.size = size
 		this.neighborRadius = neighborRadius
@@ -101,6 +102,7 @@ object SIRModel {
 		this.isSIRS = isSIRS
 		initialCount = initial
 		this.minFrameTime = delay
+		this.vaccRate = vaccRate
 	}
 
 	private fun infect(x: Int, y: Int) {
@@ -117,6 +119,12 @@ object SIRModel {
 		infectedMap.add(hash)
 	}
 
+	/**
+	 * Decay a cell from infected to removed
+	 *
+	 * @param x X coordinate of the cell
+	 * @param y Y coordinate of the cell
+	 */
 	private fun decay(x: Int, y: Int) {
 		val hash = coordsToKey(x, y)
 		infectedMap.remove(hash)
@@ -131,8 +139,7 @@ object SIRModel {
 		susceptibleMap.add(hash)
 	}
 
-	private fun vaccinate(x: Int, y: Int)
-	{
+	private fun vaccinate(x: Int, y: Int) {
 		val hash = coordsToKey(x, y)
 		susceptibleMap.remove(hash)
 		grid[x][y] = SIRState.VACCINATED
@@ -141,12 +148,10 @@ object SIRModel {
 
 	private fun processGrid() {
 		// use the map of lesser size (will normally be the infected cells map, with default parameters
-		if(vaccToggle)
-		{
+		if (vaccToggle) {
 			susceptibleMap.toSet().forEach { cell ->
-				if(nextDouble() < vaccRate)
-				{
-					keyToCoords(cell).let { vaccinate(it.first, it.second)}
+				if (nextDouble() < vaccRate) {
+					keyToCoords(cell).let { vaccinate(it.first, it.second) }
 				}
 			}
 		}
@@ -294,11 +299,15 @@ object SIRModel {
 			infectedMap.clear()
 			freshRemovedMap.clear()
 			freshInfectedMap.clear()
+			vaccMap.clear()
 			for (cell in 0 until (size * size - 1)) {
 				susceptibleMap.add(cell)
 			}
 			for (x in 1..initialCount) {
-				initialInfect(nextInt((.1*size).toInt(), (.9*size).toInt()), nextInt((.1*size).toInt(), (.9*size).toInt()))
+				initialInfect(
+					nextInt((.1 * size).toInt(), (.9 * size).toInt()),
+					nextInt((.1 * size).toInt(), (.9 * size).toInt())
+				)
 			}
 			susceptibleCount = susceptibleMap.size
 			removedCount = removedMap.size
@@ -335,19 +344,17 @@ object SIRModel {
 
 	private suspend fun resize(newSize: Int) {
 		pause()
-		println("Entered resize with new size of $newSize")
 		step_mutex.withLock {
 			image_mutex.withLock {
 				size = newSize
 				tempImage = WritableImage(size, size)
 			}
+			println("$size $newSize")
 		}
-		println("$size $newSize")
 		reset()
 	}
 
 	suspend fun addSize(newSize: Int) { // debounce for resize
-		println("added resize request of $newSize")
 		sizeStack.add(newSize)
 		val oldSize = sizeStack.size
 		delay(250)

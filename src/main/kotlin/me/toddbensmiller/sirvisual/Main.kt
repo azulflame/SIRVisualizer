@@ -46,6 +46,7 @@ fun main(args: Array<String>) {
 	val vaccMin = Key("vaccMin", doubleType)
 	val vaccMax = Key("vaccMax", doubleType)
 	val vaccStep = Key("vaccStep", doubleType)
+	val vaccRate = Key("vaccRate", doubleType)
 
 
 	val config = ConfigurationProperties.fromFile(File("sirs.properties")) overriding
@@ -60,6 +61,7 @@ fun main(args: Array<String>) {
 		config[isSIRS],
 		config[initial],
 		config[delay],
+		config[vaccRate]
 	)
 
 	SIRModelView.setRanges( config[sizeMin],

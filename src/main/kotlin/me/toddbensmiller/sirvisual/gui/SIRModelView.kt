@@ -49,7 +49,7 @@ class SIRModelView : View("SIR Visualizer") {
 
 		var vaccMin = 0.0
 		var vaccMax = 0.25
-		var vaccStep = 0.01
+		var vaccStep = 0.001
 
 		val gridImageProp = SimpleObjectProperty(SIRModel.getImage())
 		var gridImage: WritableImage by gridImageProp
@@ -116,7 +116,7 @@ class SIRModelView : View("SIR Visualizer") {
 					button("PAUSE").action {
 						SIRModel.pause()
 					}
-					button("END").action {
+					button("GRAPH").action {
 						GlobalScope.launch { SIRModel.invokeEnd() }
 					}
 					button("RESET").action {
