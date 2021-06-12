@@ -47,12 +47,5 @@ class GraphFragment : Fragment("Population Graph") {
 				data(i, x.v)
 			}
 		}
-
-		series("Healthy")
-		{
-			SIRModel.history.forEachIndexed { i, x ->
-				data(i, x.v + x.s + x.r)
-			}
-		}
 	}
 }
