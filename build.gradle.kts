@@ -3,7 +3,7 @@ import org.gradle.jvm.tasks.Jar
 
 
 plugins {
-	kotlin("jvm") version "1.4.30"
+	kotlin("jvm") version "1.6.10"
 	id("org.openjfx.javafxplugin") version "0.0.8"
 	application
 }
@@ -27,8 +27,8 @@ repositories {
 dependencies {
 	implementation("no.tornado:tornadofx:1.7.20")
 	implementation("com.natpryce:konfig:1.6.10.0")
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1")
-	implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.30")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0-RC2")
+	implementation("org.jetbrains.kotlin:kotlin-reflect:1.6.10")
 }
 
 
@@ -51,6 +51,6 @@ val fatJar = task("fatJar", type = Jar::class) {
 
 tasks {
 	"build" {
-		//dependsOn(fatJar)
+		dependsOn(fatJar)
 	}
 }
