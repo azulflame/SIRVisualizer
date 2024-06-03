@@ -60,8 +60,7 @@ fun main(args: Array<String>) {
 	val vaccStep = Key("vaccStep", doubleType)
 	val vaccRate = Key("vaccRate", doubleType)
 
-
-	val config = ConfigurationProperties.fromFile(File("sirs.properties")) overriding
+	val config = ConfigurationProperties.fromOptionalFile(File("sirs.properties")) overriding
 			ConfigurationProperties.fromResource("default.properties")
 
 	SIRModel.init(

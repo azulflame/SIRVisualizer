@@ -14,7 +14,7 @@ javafx {
 }
 
 application {
-	getMainClass().set("me.toddbensmiller.sirvisual.MainKt")
+//	getMainClass().set("me.toddbensmiller.sirvisual.MainKt")
 }
 
 group = "me.toddbensmiller.sirvisual"
@@ -37,16 +37,29 @@ tasks.withType<KotlinCompile> {
 }
 
 val fatJar = task("fatJar", type = Jar::class) {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 	archiveBaseName.set("${project.name}-fat")
     manifest {
         attributes["Implementation-Title"] = "SIR Visualizer"
         attributes["Implementation-Version"] = archiveVersion
-        attributes["Main-Class"] = "me.toddbensmiller.sirvisual.Main"
+        attributes["Main-Class"] = "me.toddbensmiller.sirvisual.MainKt"
     }
     from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
     with(tasks.jar.get() as CopySpec)
 }
 
+tasks.withType<Jar>() {
+
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+	manifest {
+		attributes["Main-Class"] = "me.toddbensmiller.sirvisual.MainKt"
+	}
+
+	configurations["compileClasspath"].forEach { file: File ->
+		from(zipTree(file.absoluteFile))
+	}
+}
 
 
 tasks {
